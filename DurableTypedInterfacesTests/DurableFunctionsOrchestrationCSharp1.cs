@@ -29,7 +29,7 @@ namespace DurableTypedInterfacesTests
         }
 
         [FunctionName("DurableFunctionsOrchestrationCSharp1_HelloParam")]
-        public static string SayHello([ActivityTrigger] string name, ILogger log)
+        public static string SayHelloWithParam([ActivityTrigger] string name, ILogger log)
         {
             log.LogInformation($"Saying hello to {name}.");
             return $"Hello {name}!";
