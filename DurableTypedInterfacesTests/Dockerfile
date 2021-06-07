@@ -1,14 +1,22 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS installer-env
+#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-COPY . /src/dotnet-function-app
-RUN cd /src/dotnet-function-app && \
-    mkdir -p /home/site/wwwroot && \
-    dotnet publish *.csproj --output /home/site/wwwroot
+FROM mcr.microsoft.com/azure-functions/dotnet:3.0 AS base
+WORKDIR /home/site/wwwroot
+EXPOSE 80
 
-# To enable ssh & remote debugging on app service change the base image to the one below
-# FROM mcr.microsoft.com/azure-functions/dotnet:3.0-appservice
-FROM mcr.microsoft.com/azure-functions/dotnet:3.0
+FROM mcr.microsoft.com/dotnet/sdk:3.1 AS build
+WORKDIR /src
+COPY ["DurableTypedInterfacesTests/DurableTypedInterfacesTests.csproj", "DurableTypedInterfacesTests/"]
+RUN dotnet restore "DurableTypedInterfacesTests/DurableTypedInterfacesTests.csproj"
+COPY . .
+WORKDIR "/src/DurableTypedInterfacesTests"
+RUN dotnet build "DurableTypedInterfacesTests.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "DurableTypedInterfacesTests.csproj" -c Release -o /app/publish
+
+FROM base AS final
+WORKDIR /home/site/wwwroot
+COPY --from=publish /app/publish .
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
     AzureFunctionsJobHost__Logging__Console__IsEnabled=true
-
-COPY --from=installer-env ["/home/site/wwwroot", "/home/site/wwwroot"]
